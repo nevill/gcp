@@ -37,6 +37,11 @@ type Manager struct {
 	instance     *compute.Instance
 }
 
+type EnvVars []struct {
+	Name  string
+	Value string
+}
+
 func New() (*Manager, error) {
 	ctx := context.Background()
 	svc, err := compute.NewService(ctx)
@@ -58,13 +63,16 @@ func New() (*Manager, error) {
 	return &manager, nil
 }
 
-func (m *Manager) CreateContainer(containerImage string) error {
+func (m *Manager) CreateContainer(image string, cmd []string, args []string, env EnvVars) error {
 	policy := konlet.RestartPolicyNever
 	containerSpec := konlet.ContainerSpec{
 		Spec: konlet.ContainerSpecStruct{
 			Containers: []konlet.Container{
 				konlet.Container{
-					Image: containerImage,
+					Image: image,
+					Args:  args,
+					Env:   env,
+					Command: cmd,
 				},
 			},
 			RestartPolicy: &policy,
