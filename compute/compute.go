@@ -181,7 +181,8 @@ func (m *Manager) createInstance(metadata *string) error {
 	instance := compute.Instance{
 		Disks: []*compute.AttachedDisk{
 			&compute.AttachedDisk{
-				Boot: true,
+				AutoDelete: true,
+				Boot:       true,
 				InitializeParams: &compute.AttachedDiskInitializeParams{
 					DiskSizeGb:  100,
 					SourceImage: "projects/cos-cloud/global/images/family/cos-stable",
@@ -231,6 +232,72 @@ func (m *Manager) createInstance(metadata *string) error {
 
 	fmt.Println("New instance", instance.Name, "has been created")
 	return m.readInstance()
+}
+
+func (m *Manager) DeleteInstance() error {
+	if m.instance == nil {
+		if err := m.readInstance(); err != nil {
+			return err
+		}
+	}
+
+	api := m.computeService
+	op, err := api.Instances.Delete(project, zone, m.instance.Name).Do()
+	if err != nil {
+		return err
+	}
+
+	err = waitFor(fmt.Sprintf("Deleting compute instance %s ...", m.instance.Name), op, api)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Instance", m.instance.Name, "has been deleted")
+	return nil
+}
+
+func (m *Manager) DeleteNodeGroup() error {
+	if m.nodeGroup == nil {
+		if err := m.readNodeGroup(); err != nil {
+			return err
+		}
+	}
+
+	api := m.computeService
+	op, err := api.NodeGroups.Delete(project, zone, m.nodeGroup.Name).Do()
+	if err != nil {
+		return err
+	}
+
+	err = waitFor(fmt.Sprintf("Deleting node group %s ...", m.nodeGroup.Name), op, api)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Node group", m.nodeGroup.Name, "has been deleted")
+	return nil
+}
+
+func (m *Manager) DeleteNodeTemplate() error {
+	if m.nodeTemplate == nil {
+		if err := m.readNodeTemplate(); err != nil {
+			return err
+		}
+	}
+
+	api := m.computeService
+	op, err := api.NodeTemplates.Delete(project, region, m.nodeTemplate.Name).Do()
+	if err != nil {
+		return err
+	}
+
+	err = waitFor(fmt.Sprintf("Deleting node template %s ...", m.nodeTemplate.Name), op, api)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Node template", m.nodeTemplate.Name, "has been deleted")
+	return nil
 }
 
 // Get the last part of URL, split by '/'.
