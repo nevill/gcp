@@ -53,25 +53,25 @@ func New() (*Manager, error) {
 		computeService: svc,
 	}
 
-	if err = manager.createNodeTemplate(); err != nil {
-		return nil, err
-	}
-	if err = manager.createNodeGroup(); err != nil {
-		return nil, err
-	}
-
 	return &manager, nil
 }
 
 func (m *Manager) CreateContainer(image string, cmd []string, args []string, env EnvVars) error {
+
+	if m.nodeGroup == nil {
+		if err := m.createNodeGroup(); err != nil {
+			return err
+		}
+	}
+
 	policy := konlet.RestartPolicyNever
 	containerSpec := konlet.ContainerSpec{
 		Spec: konlet.ContainerSpecStruct{
 			Containers: []konlet.Container{
 				konlet.Container{
-					Image: image,
-					Args:  args,
-					Env:   env,
+					Image:   image,
+					Args:    args,
+					Env:     env,
 					Command: cmd,
 				},
 			},
@@ -137,6 +137,12 @@ func (m *Manager) readNodeGroup() error {
 }
 
 func (m *Manager) createNodeGroup() error {
+	if m.nodeTemplate == nil {
+		if err := m.createNodeTemplate(); err != nil {
+			return err
+		}
+	}
+
 	api := m.computeService
 	nodeGroup := compute.NodeGroup{
 		Name:         SoleTenantName,
