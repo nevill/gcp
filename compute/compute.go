@@ -177,6 +177,15 @@ func (m *Manager) readInstance() error {
 	return nil
 }
 
+func (m *Manager) GetInstance() (*compute.Instance, error) {
+	if m.instance == nil {
+		if err := m.readInstance(); err != nil {
+			return nil, err
+		}
+	}
+	return m.instance, nil
+}
+
 func (m *Manager) createInstance(metadata *string) error {
 	instance := compute.Instance{
 		Disks: []*compute.AttachedDisk{
@@ -297,6 +306,34 @@ func (m *Manager) DeleteNodeTemplate() error {
 	}
 
 	fmt.Println("Node template", m.nodeTemplate.Name, "has been deleted")
+	return nil
+}
+
+func (m *Manager) SetMetadata(keyVals map[string]string) error {
+	if m.instance == nil {
+		m.readInstance()
+	}
+	api := m.computeService
+
+	metadata := m.instance.Metadata
+
+	items := metadata.Items
+	for key, val := range keyVals {
+		items = append(items, &compute.MetadataItems{Key: key, Value: &val})
+	}
+	metadata.Items = items
+
+	op, err := api.Instances.SetMetadata(project, zone, m.instance.Name, metadata).Do()
+
+	if err != nil {
+		return err
+	}
+
+	err = waitFor(fmt.Sprintf("Setting metadata on %s ...", m.instance.Name), op, api)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
